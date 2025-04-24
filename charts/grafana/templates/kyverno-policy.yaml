@@ -1,0 +1,39 @@
+{{- if .Values.kyvernoPolicy.enabled }}
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: {{ printf "add-vendor-app-labels-%s-%s" .Release.Name .Chart.Name }}
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation
+  labels:
+    # Add standard Helm labels to the policy itself for tracking
+    {{- include "grafana.labels" . | nindent 4 }}
+spec:
+  # Setting failurePolicy to Ignore is often safer for mutation policies
+  # to avoid blocking resource creation if Kyverno has issues.
+  # Change to Fail if you require the mutation to succeed.
+  failurePolicy: Ignore
+  background: false
+  rules:
+  - name: add-grafana-vendor-app-labels # More specific rule name
+    match:
+      any:
+      - resources:
+          # Targets only the namespace where this chart is installed
+          namespaces:
+          - {{ .Release.Namespace }}
+          kinds:
+          - Pod
+          # Optionally, be more specific by matching pods created by this release
+          # selector:
+          #   matchLabels:
+          #     app.kubernetes.io/instance: {{ .Release.Name }}
+          #     app.kubernetes.io/name: {{ include "grafana.name" . }}
+    mutate:
+      patchStrategicMerge:
+        metadata:
+          labels:
+            +(hpe-ezua/type): vendor-service # Using +() ensures the label is added even if metadata.labels doesn't exist
+{{- end }}

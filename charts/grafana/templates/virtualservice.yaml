@@ -1,0 +1,48 @@
+{{- if .Values.ezua.virtualService.enabled -}}
+apiVersion: networking.istio.io/v1beta1 # Using v1beta1 as v1alpha3 is deprecated
+kind: VirtualService
+metadata:
+  name: {{ include "grafana.fullname" . }}
+  namespace: {{ include "grafana.namespace" . }}
+  labels:
+    {{- include "grafana.labels" . | nindent 4 }}
+spec:
+  gateways:
+  {{- if .Values.ezua.virtualService.istioGateway }}
+    - {{ .Values.ezua.virtualService.istioGateway }}
+  {{- else }}
+    # It's recommended to define a gateway, otherwise this might not work as expected.
+    # - my-gateway # Example: Add a default or raise an error if not set
+    {{- fail "ezua.virtualService.istioGateway must be set when ezua.virtualService.enabled is true" }}
+  {{- end }}
+  hosts:
+  {{- if .Values.ezua.virtualService.endpoint }}
+    - {{ tpl .Values.ezua.virtualService.endpoint . }}
+  {{- else }}
+    # It's recommended to define an endpoint/host.
+    # - grafana.example.com # Example: Add a default or raise an error if not set
+    {{- fail "ezua.virtualService.endpoint must be set when ezua.virtualService.enabled is true" }}
+  {{- end }}
+  http:
+    - match:
+      {{- if .Values.ezua.virtualService.matchUris }}
+        {{- toYaml .Values.ezua.virtualService.matchUris | nindent 8 }}
+      {{- else }}
+        - uri:
+            prefix: /
+      {{- end }}
+      {{- if .Values.ezua.virtualService.rewriteUri }}
+      rewrite:
+        uri: {{ .Values.ezua.virtualService.rewriteUri }}
+      {{- else }}
+      rewrite:
+        uri: / # Default rewrite if not specified
+      {{- end }}
+      route:
+        - destination:
+            # Route traffic to the Grafana Kubernetes Service
+            host: {{ include "grafana.fullname" . }}.{{ include "grafana.namespace" . }}.svc.cluster.local
+            port:
+              # Use the port defined in the Grafana service values
+              number: {{ .Values.service.port }}
+{{- end }}

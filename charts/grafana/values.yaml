@@ -16,7 +16,24 @@ global:
   #   - pullSecret2
   imagePullSecrets: []
 
+# --- Istio VirtualService Configuration ---
+# If enabled, creates an Istio VirtualService resource to expose Grafana
+ezua:
+  virtualService:
+    # -- Set to true to enable the creation of the Istio VirtualService
+    enabled: false
+    # -- The hostname where Grafana will be accessible via the Istio Gateway.
+    # -- ${DOMAIN_NAME} should be substituted by your deployment process if needed.
+    endpoint: "grafana.${DOMAIN_NAME}"
+    # -- The Istio Gateway (namespace/name) to attach the VirtualService to.
+    istioGateway: "istio-system/ezaf-gateway"
 
+# --- Kyverno Policy Configuration ---
+# If enabled, creates a Kyverno ClusterPolicy to label Grafana pods
+kyvernoPolicy:
+  # -- Set to true to enable the creation of the Kyverno ClusterPolicy
+  enabled: false
+  
 rbac:
   create: true
   ## Use an existing ClusterRole/Role (depending on rbac.namespaced false/true)
